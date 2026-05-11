@@ -39,6 +39,10 @@ interface CliConfig {
   systemPrompt: string;
   relayUrlsRaw: string | undefined;
   skills: string[];
+  /** Layer-4 authoritative skills — dotted paths this peer executes. */
+  authoritative: string[];
+  /** Layer-4 delegating zones — DNS-NS-style routing. */
+  delegating: string[];
 }
 
 function parseFlags(argv: readonly string[]): Partial<CliConfig> {
@@ -60,6 +64,12 @@ function parseFlags(argv: readonly string[]): Partial<CliConfig> {
     ...(out.systemPrompt ? { systemPrompt: out.systemPrompt } : {}),
     ...(out.relayUrls ? { relayUrlsRaw: out.relayUrls } : {}),
     ...(skillsRaw ? { skills: skillsRaw.split(',').map((s) => s.trim()).filter(Boolean) } : {}),
+    ...(out.authoritative
+      ? { authoritative: out.authoritative.split(',').map((s) => s.trim()).filter(Boolean) }
+      : {}),
+    ...(out.delegating
+      ? { delegating: out.delegating.split(',').map((s) => s.trim()).filter(Boolean) }
+      : {}),
   };
 }
 
@@ -75,6 +85,12 @@ function fromEnv(): Partial<CliConfig> {
     ...(env.LEGION_SYSTEM_PROMPT ? { systemPrompt: env.LEGION_SYSTEM_PROMPT } : {}),
     ...(env.LEGION_RELAY_URLS ? { relayUrlsRaw: env.LEGION_RELAY_URLS } : {}),
     ...(env.LEGION_SKILLS ? { skills: env.LEGION_SKILLS.split(',').map((s) => s.trim()).filter(Boolean) } : {}),
+    ...(env.LEGION_AUTHORITATIVE
+      ? { authoritative: env.LEGION_AUTHORITATIVE.split(',').map((s) => s.trim()).filter(Boolean) }
+      : {}),
+    ...(env.LEGION_DELEGATING
+      ? { delegating: env.LEGION_DELEGATING.split(',').map((s) => s.trim()).filter(Boolean) }
+      : {}),
   };
 }
 
@@ -94,6 +110,8 @@ function resolveConfig(): CliConfig {
       'Headless mesh bridge — proxies engine_run to a Codec-aware HTTP server.',
     relayUrlsRaw: args.relayUrlsRaw ?? env.relayUrlsRaw,
     skills: args.skills ?? env.skills ?? ['chat', 'agent'],
+    authoritative: args.authoritative ?? env.authoritative ?? [],
+    delegating: args.delegating ?? env.delegating ?? [],
   };
   const missing: string[] = [];
   if (!cfg.modelId) missing.push('--model-id (or LEGION_MODEL_ID)');
@@ -156,6 +174,8 @@ async function main(): Promise<void> {
       skills: cfg.skills,
       systemPromptSummary: cfg.systemPrompt.slice(0, 120),
       tools: advertisedTools, // re-minted after bridge registers below
+      ...(cfg.authoritative.length > 0 ? { authoritative: cfg.authoritative } : {}),
+      ...(cfg.delegating.length > 0 ? { delegating: cfg.delegating } : {}),
     },
   });
 
@@ -180,6 +200,8 @@ async function main(): Promise<void> {
     skills: cfg.skills,
     systemPromptSummary: cfg.systemPrompt.slice(0, 120),
     tools: registry.descriptorsFor(['engine_run', 'ping']),
+    ...(cfg.authoritative.length > 0 ? { authoritative: cfg.authoritative } : {}),
+    ...(cfg.delegating.length > 0 ? { delegating: cfg.delegating } : {}),
   });
 
   // Wire `tc` tool-call inbound → dispatch through the registry → echo

@@ -1,0 +1,56 @@
+{
+  "name": "@unstable-legion/core",
+  "version": "0.0.1",
+  "description": "Browser-AI mesh on the Codec wire — Trystero peer + cap-announce roster + tool registry + MCP Streamable-HTTP client + safety prefilter + WebGPU LLM lifecycle. Framework-free. Bundles the full codecai stack + Trystero MQTT strategy + msgpack as direct dependencies — a single `npm install @unstable-legion/core` pulls everything a mesh app needs.",
+  "license": "BSL-1.1",
+  "type": "module",
+  "main": "./dist/cjs/index.cjs",
+  "module": "./dist/esm/index.js",
+  "types": "./dist/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/esm/index.js",
+      "require": "./dist/cjs/index.cjs"
+    }
+  },
+  "files": [
+    "dist/",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "npm run build:esm && npm run build:cjs && npm run build:types",
+    "build:esm": "tsc -p tsconfig.esm.json",
+    "build:cjs": "tsc -p tsconfig.cjs.json && node -e \"require('fs').readdirSync('dist/cjs').filter(f=>f.endsWith('.js')).forEach(f=>require('fs').renameSync('dist/cjs/'+f,'dist/cjs/'+f.replace(/\\.js$/,'.cjs')))\"",
+    "build:types": "tsc -p tsconfig.types.json",
+    "test": "node --test --import tsx test/*.test.ts",
+    "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\""
+  },
+  "dependencies": {
+    "@codecai/web": "file:../codecai/web",
+    "@codecai/web-safety": "file:../codecai/web-safety",
+    "@msgpack/msgpack": "^3.0.0",
+    "@trystero-p2p/mqtt": "^0.24.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/wdunn001/unstable-legion.git",
+    "directory": "packages/mesh-core"
+  },
+  "keywords": [
+    "codec",
+    "mesh",
+    "browser-ai",
+    "webrtc",
+    "trystero",
+    "mqtt",
+    "llm",
+    "p2p",
+    "mcp"
+  ]
+}

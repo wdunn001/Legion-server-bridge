@@ -35,12 +35,47 @@ let polyfillInstalled = false;
  * Install Trystero's required globals (`RTCPeerConnection`, etc.) via
  * `node-datachannel/polyfill`. Idempotent — safe to call multiple
  * times. Throws if `node-datachannel` isn't installed.
+ *
+ * node-datachannel's polyfill module EXPORTS the classes but doesn't
+ * always auto-assign them to `globalThis` (varies by version). We
+ * read the named exports and set the globals explicitly so Trystero's
+ * `new RTCPeerConnection(...)` finds them.
  */
 export async function installWebRtcPolyfill(): Promise<void> {
   if (polyfillInstalled) return;
-  // Dynamic import so consumers building for the browser don't pay
-  // the cost — and so a missing native binary throws a clear error.
-  await import('node-datachannel/polyfill');
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const mod = (await import('node-datachannel/polyfill')) as any;
+  const g = globalThis as Record<string, unknown>;
+  const names = [
+    'RTCPeerConnection',
+    'RTCDataChannel',
+    'RTCSessionDescription',
+    'RTCIceCandidate',
+    'RTCCertificate',
+    'RTCSctpTransport',
+    'RTCDtlsTransport',
+    'RTCIceTransport',
+  ];
+  for (const name of names) {
+    const exported = mod[name] ?? mod.default?.[name];
+    if (exported && g[name] === undefined) {
+      g[name] = exported;
+    }
+  }
+  // Some polyfills also expose a `polyfillWebRTC()` helper — call it
+  // if present, for any auto-wiring it does beyond the named classes.
+  if (typeof mod.polyfillWebRTC === 'function') {
+    try {
+      mod.polyfillWebRTC();
+    } catch {
+      /* best-effort */
+    }
+  }
+  if (typeof (globalThis as { RTCPeerConnection?: unknown }).RTCPeerConnection !== 'function') {
+    throw new Error(
+      'node-datachannel polyfill loaded but RTCPeerConnection is not on globalThis. Check node-datachannel version (^0.27 expected).',
+    );
+  }
   polyfillInstalled = true;
 }
 

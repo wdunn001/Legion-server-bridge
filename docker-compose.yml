@@ -1,0 +1,30 @@
+# legion-server-bridge — runs alongside a Codec-aware HTTP server
+# (sglang / vLLM / llama.cpp with wdunn001 codec patches) and joins
+# an Unstable Legion mesh as a headless peer.
+#
+# Network: extra_hosts maps `host.docker.internal` to the host gateway
+# so the bridge can reach a Codec server bound to the host's localhost
+# (the typical sglang/vllm setup) without sharing a docker network.
+#
+# Adjust `LEGION_CODEC_URL` if the Codec server is on a different host.
+
+services:
+  legion-bridge:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: legion-server-bridge
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      LEGION_APP_ID: ${LEGION_APP_ID:-unstable-legion-demo-v0}
+      LEGION_ROOM_ID: ${LEGION_ROOM_ID:-legion-demo}
+      LEGION_NICK: ${LEGION_NICK:-sglang-gw}
+      LEGION_MODEL_ID: ${LEGION_MODEL_ID:-Qwen/Qwen2.5-0.5B-Instruct}
+      LEGION_MAP_ID: ${LEGION_MAP_ID:-qwen/qwen2}
+      LEGION_CODEC_URL: ${LEGION_CODEC_URL:-http://host.docker.internal:30000}
+      LEGION_SKILLS: ${LEGION_SKILLS:-chat,agent}
+      LEGION_AUTHORITATIVE: ${LEGION_AUTHORITATIVE:-chat,language.en,reasoning}
+      LEGION_DELEGATING: ${LEGION_DELEGATING:-}
+      LEGION_SYSTEM_PROMPT: ${LEGION_SYSTEM_PROMPT:-Headless mesh peer backed by a Codec-aware HTTP server.}
