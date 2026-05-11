@@ -25,6 +25,8 @@ import {
   ToolRegistry,
   registerBuiltinTools,
   mergeRelayUrls,
+  defaultTurnConfig,
+  type IceServerEntry,
 } from '@unstable-legion/core';
 import { joinServerMesh } from './peer.js';
 import { createCodecHttpBridge } from './bridge.js';
@@ -142,6 +144,35 @@ async function main(): Promise<void> {
   });
   console.log('[legion-bridge] relays:', relayUrls);
 
+  // TURN config — necessary when the bridge and a browser peer both
+  // sit behind NATs that STUN alone can't traverse (the common case
+  // for an external browser reaching a LAN-only sglang box). Defaults
+  // to the OpenRelay public free TURN; override with self-hosted via
+  // LEGION_TURN_URLS / LEGION_TURN_USERNAME / LEGION_TURN_CREDENTIAL.
+  const turnExtras: IceServerEntry[] = [];
+  const turnUrlsRaw = process.env.LEGION_TURN_URLS;
+  if (turnUrlsRaw) {
+    const urls = turnUrlsRaw.split(/[\s,]+/).filter(Boolean);
+    const username = process.env.LEGION_TURN_USERNAME;
+    const credential = process.env.LEGION_TURN_CREDENTIAL;
+    for (const url of urls) {
+      turnExtras.push({
+        urls: url,
+        ...(username ? { username } : {}),
+        ...(credential ? { credential } : {}),
+      });
+    }
+  }
+  const useDefaultTurn = process.env.LEGION_TURN_USE_DEFAULT !== '0';
+  const turnConfig = defaultTurnConfig({
+    extras: turnExtras,
+    useDefault: useDefaultTurn,
+  });
+  console.log(
+    '[legion-bridge] turn servers:',
+    turnConfig.map((e) => (typeof e.urls === 'string' ? e.urls : e.urls.join(','))),
+  );
+
   // Tool registry — Node-side. Opt in to `engine_run` only (and ping
   // for liveness). We don't expose `current_time` or `fetch_text` from
   // a server context — those are operator-supplied client tools.
@@ -163,6 +194,9 @@ async function main(): Promise<void> {
     trysteroConfig: {
       appId: cfg.appId,
       relayConfig: { urls: relayUrls },
+      // Trystero appends `turnConfig` to its default STUN list — see
+      // @trystero-p2p/core peer.ts `defaultIceServers.concat(turnConfig ?? [])`.
+      turnConfig,
     },
     roomId: cfg.roomId,
     cap: {

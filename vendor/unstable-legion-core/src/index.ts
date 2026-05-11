@@ -136,6 +136,11 @@ export {
   type MergeRelayUrlsOptions,
 } from './relays.js';
 export {
+  defaultTurnConfig,
+  type DefaultTurnConfigOptions,
+  type IceServerEntry,
+} from './iceServers.js';
+export {
   isMirroredModelId,
   mirroredModelUrl,
   type MirroredModelConfig,
