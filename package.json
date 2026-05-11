@@ -1,0 +1,66 @@
+{
+  "name": "@unstable-legion/server-bridge",
+  "version": "0.0.1",
+  "description": "Headless Node bridge that joins an Unstable Legion mesh as a peer and proxies engine_run tool calls to a Codec-aware HTTP server (sglang / vLLM / llama.cpp). From the mesh's perspective an sglang-backed peer and a browser-LLM peer are interchangeable — same cap, same `tc` action, same `cf` Codec frames.",
+  "license": "BSL-1.1",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "legion-bridge": "./dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./bridge": {
+      "types": "./dist/bridge.d.ts",
+      "import": "./dist/bridge.js"
+    },
+    "./peer": {
+      "types": "./dist/peer.d.ts",
+      "import": "./dist/peer.js"
+    }
+  },
+  "files": [
+    "dist/",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/cli.js",
+    "dev": "tsx src/cli.ts",
+    "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\""
+  },
+  "dependencies": {
+    "@unstable-legion/core": "file:../unstable-legion/packages/mesh-core",
+    "@msgpack/msgpack": "^3.0.0",
+    "@trystero-p2p/mqtt": "^0.24.0",
+    "node-datachannel": "^0.27.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/wdunn001/legion-server-bridge.git"
+  },
+  "keywords": [
+    "unstable-legion",
+    "trystero",
+    "codec",
+    "sglang",
+    "vllm",
+    "llama.cpp",
+    "mqtt",
+    "bridge",
+    "headless"
+  ]
+}
