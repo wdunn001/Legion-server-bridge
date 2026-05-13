@@ -120,24 +120,29 @@ export function createCodecHttpBridge(opts: CodecHttpBridgeOptions): () => void 
     },
   });
 
-  // Distributed-/ai responder. The browser demo (mesh-react's
-  // MeshChatPanel) broadcasts `/ai <prompt>` as a chat message and
-  // expects any peer with `cap.available=true` and a working engine
-  // to claim it and stream Codec frames back. The bridge is exactly
-  // such a peer — cap.available is true whenever the HTTP backend is
-  // reachable, and `streamCodecHttp` already does the frame proxy.
+  // Distributed-/ai responder. Two cases match the browser-side
+  // MeshChatPanel logic exactly:
   //
-  // Guard: only respond when the SENDER's cap is unavailable (they'd
-  // have run it themselves otherwise). Matches the browser-side
-  // election heuristic in MeshChatPanel — keeps thundering-herd
-  // semantics consistent across browser and bridge peers.
+  //   1. Directed (`msg.to === peer.selfId`) — the sender wrote
+  //      `/ai @<our-nick> ...` and Trystero unicast it to us. Always
+  //      respond, regardless of whether the sender has its own LLM.
+  //   2. Broadcast (`msg.to === ''`) — only respond when the sender's
+  //      cap is unavailable (they'd have run it themselves otherwise).
+  //
+  // The bridge strips a leading `@<nick> ` from the prompt so the
+  // upstream Codec server isn't asked to literally talk to itself.
   const unsubChat = peer.onChat((msg, peerId) => {
     if (peerId === peer.selfId) return;
     if (msg.bodyKind !== 'text' || typeof msg.text !== 'string') return;
     if (!msg.text.startsWith('/ai ')) return;
-    const senderCap = peer.roster.get(peerId);
-    if (senderCap?.available) return;
-    const prompt = msg.text.slice(4).trim();
+    const directed = msg.to === peer.selfId;
+    if (!directed) {
+      const senderCap = peer.roster.get(peerId);
+      if (senderCap?.available) return;
+    }
+    let prompt = msg.text.slice(4).trim();
+    const atMatch = /^@\S+\s+(.*)$/s.exec(prompt);
+    if (atMatch) prompt = atMatch[1]!;
     if (!prompt) return;
     void streamCodecHttp({
       endpoint,
