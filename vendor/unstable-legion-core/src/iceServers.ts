@@ -33,14 +33,17 @@ export interface IceServerEntry {
 
 export interface DefaultTurnConfigOptions {
   /**
-   * Operator-supplied TURN entries — prepended before the bundled
-   * public free relay. Use this for self-hosted coturn or paid TURN.
+   * Operator-supplied TURN entries — the primary way to configure
+   * TURN. Use this for self-hosted coturn or paid TURN.
    */
   extras?: readonly IceServerEntry[];
   /**
-   * Include the bundled OpenRelay public TURN credentials. Default
-   * true. Set false to use *only* `extras`. OpenRelay is free / rate-
-   * limited / best-effort — fine for dev, not for prod.
+   * Include the bundled OpenRelay public TURN credentials. **Off by
+   * default** — OpenRelay's TLS endpoint is now ECONNREFUSED and the
+   * historical `openrelayproject` credentials appear deprecated.
+   * Handing dead TURN URLs to the WebRTC stack actively breaks ICE
+   * gathering even for the same-LAN happy path. Opt back in only if
+   * you've verified OpenRelay is reachable from both sides.
    */
   useDefault?: boolean;
 }
@@ -75,9 +78,13 @@ const OPENRELAY_TURN: readonly IceServerEntry[] = [
 /**
  * Build a `turnConfig` array suitable for `joinRoom({ turnConfig })`.
  * Trystero appends this to its default STUN servers.
+ *
+ * Returns `[]` by default (STUN-only behavior) — callers pass
+ * `extras` for self-hosted coturn or set `useDefault: true` to opt
+ * back into the bundled OpenRelay entries.
  */
 export function defaultTurnConfig(opts: DefaultTurnConfigOptions = {}): IceServerEntry[] {
-  const useDefault = opts.useDefault !== false;
+  const useDefault = opts.useDefault === true;
   const out: IceServerEntry[] = [];
   for (const e of opts.extras ?? []) out.push(e);
   if (useDefault) {

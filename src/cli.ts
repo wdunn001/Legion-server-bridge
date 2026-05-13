@@ -146,9 +146,17 @@ async function main(): Promise<void> {
 
   // TURN config — necessary when the bridge and a browser peer both
   // sit behind NATs that STUN alone can't traverse (the common case
-  // for an external browser reaching a LAN-only sglang box). Defaults
-  // to the OpenRelay public free TURN; override with self-hosted via
-  // LEGION_TURN_URLS / LEGION_TURN_USERNAME / LEGION_TURN_CREDENTIAL.
+  // for an external browser reaching a LAN-only sglang box).
+  //
+  // OFF by default. The bundled OpenRelay free credentials no longer
+  // work (their TLS port is ECONNREFUSED) and handing the dead URLs
+  // to the WebRTC stack breaks ICE gathering for the LAN case too,
+  // even before we get to the WAN case. Opt in by setting:
+  //   LEGION_TURN_URLS=turn:your.coturn:3478
+  //   LEGION_TURN_USERNAME=...
+  //   LEGION_TURN_CREDENTIAL=...
+  // and (optionally) LEGION_TURN_USE_DEFAULT=1 to re-enable the
+  // bundled OpenRelay entries.
   const turnExtras: IceServerEntry[] = [];
   const turnUrlsRaw = process.env.LEGION_TURN_URLS;
   if (turnUrlsRaw) {
@@ -163,7 +171,7 @@ async function main(): Promise<void> {
       });
     }
   }
-  const useDefaultTurn = process.env.LEGION_TURN_USE_DEFAULT !== '0';
+  const useDefaultTurn = process.env.LEGION_TURN_USE_DEFAULT === '1';
   const turnConfig = defaultTurnConfig({
     extras: turnExtras,
     useDefault: useDefaultTurn,
