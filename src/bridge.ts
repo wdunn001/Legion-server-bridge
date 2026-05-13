@@ -135,6 +135,9 @@ export function createCodecHttpBridge(opts: CodecHttpBridgeOptions): () => void 
     if (peerId === peer.selfId) return;
     if (msg.bodyKind !== 'text' || typeof msg.text !== 'string') return;
     if (!msg.text.startsWith('/ai ')) return;
+    // Directed at a different peer? Drop. Bucket layout matches the
+    // browser-side responder in @unstable-legion/react.
+    if (msg.to && msg.to !== peer.selfId) return;
     const directed = msg.to === peer.selfId;
     if (!directed) {
       const senderCap = peer.roster.get(peerId);
